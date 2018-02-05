@@ -2,14 +2,14 @@
   "name": "tiff",
   "version": "3.0.0",
   "description": "TIFF image decoder written entirely in JavaScript",
-  "main": "lib/index.js",
+  "main": "index",
   "module": "src/index.js",
   "files": [
     "lib",
     "src"
   ],
   "scripts": {
-    "eslint": "eslint src test",
+    "eslint": "eslint src __tests__",
     "eslint-fix": "npm run eslint -- --fix",
     "prepare": "rollup -c",
     "test": "run-s testonly eslint",
