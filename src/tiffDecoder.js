@@ -168,9 +168,11 @@ export default class TIFFDecoder extends IOBuffer {
     const height = ifd.height;
 
     const bitDepth = validateBitDepth(ifd.bitsPerSample);
+    const samplesPerPixel = ifd.samplesPerPixel;
+    console.log(samplesPerPixel);
     const sampleFormat = ifd.sampleFormat;
     const size = width * height;
-    const data = getDataArray(size, 1, bitDepth, sampleFormat);
+    const data = getDataArray(size, 1, bitDepth, sampleFormat, samplesPerPixel);
 
     const compression = ifd.compression;
     const rowsPerStrip = ifd.rowsPerStrip;
@@ -199,7 +201,8 @@ export default class TIFFDecoder extends IOBuffer {
             data,
             stripData,
             pixel,
-            length
+            length,
+            samplesPerPixel
           );
           break;
         case 5: // LZW
@@ -215,26 +218,26 @@ export default class TIFFDecoder extends IOBuffer {
     ifd.data = data;
   }
 
-  fillUncompressed(bitDepth, sampleFormat, data, stripData, pixel, length) {
+  fillUncompressed(bitDepth, sampleFormat, data, stripData, pixel, length, samplesPerPixel) {
     if (bitDepth === 8) {
-      return fill8bit(data, stripData, pixel, length);
+      return fill8bit(data, stripData, pixel, length, samplesPerPixel);
     } else if (bitDepth === 16) {
-      return fill16bit(data, stripData, pixel, length, this.isLittleEndian());
+      return fill16bit(data, stripData, pixel, length, samplesPerPixel, this.isLittleEndian());
     } else if (bitDepth === 32 && sampleFormat === 3) {
-      return fillFloat32(data, stripData, pixel, length, this.isLittleEndian());
+      return fillFloat32(data, stripData, pixel, length, samplesPerPixel, this.isLittleEndian());
     } else {
       throw unsupported('bitDepth', bitDepth);
     }
   }
 }
 
-function getDataArray(size, channels, bitDepth, sampleFormat) {
+function getDataArray(size, channels, bitDepth, sampleFormat, samplesPerPixel) {
   if (bitDepth === 8) {
-    return new Uint8Array(size * channels);
+    return new Uint8Array(size * channels * samplesPerPixel);
   } else if (bitDepth === 16) {
-    return new Uint16Array(size * channels);
+    return new Uint16Array(size * channels * samplesPerPixel);
   } else if (bitDepth === 32 && sampleFormat === 3) {
-    return new Float32Array(size * channels);
+    return new Float32Array(size * channels * samplesPerPixel);
   } else {
     throw unsupported(
       'bit depth / sample format',
@@ -243,22 +246,22 @@ function getDataArray(size, channels, bitDepth, sampleFormat) {
   }
 }
 
-function fill8bit(dataTo, dataFrom, index, length) {
-  for (var i = 0; i < length; i++) {
+function fill8bit(dataTo, dataFrom, index, length, samplesPerPixel) {
+  for (var i = 0; i < length * samplesPerPixel; i++) {
     dataTo[index++] = dataFrom.getUint8(i);
   }
   return index;
 }
 
-function fill16bit(dataTo, dataFrom, index, length, littleEndian) {
-  for (var i = 0; i < length * 2; i += 2) {
+function fill16bit(dataTo, dataFrom, index, length, samplesPerPixel, littleEndian) {
+  for (var i = 0; i < length * 2 * samplesPerPixel; i += 2) {
     dataTo[index++] = dataFrom.getUint16(i, littleEndian);
   }
   return index;
 }
 
-function fillFloat32(dataTo, dataFrom, index, length, littleEndian) {
-  for (var i = 0; i < length * 4; i += 4) {
+function fillFloat32(dataTo, dataFrom, index, length, samplesPerPixel, littleEndian) {
+  for (var i = 0; i < length * 4 * samplesPerPixel; i += 4) {
     dataTo[index++] = dataFrom.getFloat32(i, littleEndian);
   }
   return index;
